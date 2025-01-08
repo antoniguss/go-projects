@@ -58,7 +58,7 @@ func (tm *TodoManager) MarkCompleted(id int) error {
 	return fmt.Errorf("no todo with id %d", id)
 }
 
-func (tm *TodoManager) ReadFromFile(filePath string, overwrite bool) error {
+func (tm *TodoManager) Import(filePath string, overwrite bool) error {
 	if !strings.HasSuffix(filePath, ".csv") {
 		return errors.New("path must be to a .csv file")
 	}
@@ -143,7 +143,7 @@ func parseTodoRecord(record []string) (Todo, error) {
 	}, nil
 }
 
-func (tm *TodoManager) SaveToFile(filePath string) error {
+func (tm *TodoManager) Export(filePath string) error {
 	if !strings.HasSuffix(filePath, ".csv") {
 		return errors.New("path must be to a .csv file")
 	}
