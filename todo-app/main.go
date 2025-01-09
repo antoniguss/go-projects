@@ -12,9 +12,11 @@ var (
     - add <desc>: Add a TODO with a description
     - display: Display all TODOs
     - remove <id>: Remove TODO with given id
-    - complete <id>: Mark TODO with given id as completed
-    - import <filepath>: Import TODOs from a given .csv file
-    - export <filepath>: Export TODOs to a given .csv file`
+    - complete <id>: Mark TODO with given id as completed`
+	// - import <filepath>: Import TODOs from a given .csv file
+	// - export <filepath>: Export TODOs to a given .csv file`
+
+	todosPath = "./todos.csv"
 
 	debug       = flag.Bool("debug", false, "log out all the debug information")
 	todoManager TodoManager
@@ -30,11 +32,14 @@ func main() {
 	// import(filePath string)
 	// export(filePath string)
 
-	todoManager = TodoManager{}
-	todoManager.Import("./todos.csv", false)
-
 	flag.Parse()
 	args := flag.Args()
+
+	todoManager = TodoManager{}
+	err := todoManager.Import(todosPath, false)
+	if err != nil {
+		printDebug(err.Error())
+	}
 
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, usage)
@@ -44,7 +49,7 @@ func main() {
 
 	command := args[0]
 
-	err := executeCommand(command, args[1:])
+	err = executeCommand(command, args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usage)
@@ -88,6 +93,21 @@ func executeCommand(command string, args []string) error {
 		todoManager.DisplayTodos(true)
 		return nil
 	case "remove":
+
+		if len(args) != 1 {
+			return fmt.Errorf("remove command expects 1 non-empty string argument")
+		}
+
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("remove command expects 1 non-empty string argument, (%s)", err.Error())
+
+		}
+
+		err = todoManager.RemoveTodo(id)
+		if err != nil {
+			return err
+		}
 		return nil
 	case "complete":
 		if len(args) != 1 {
@@ -96,7 +116,7 @@ func executeCommand(command string, args []string) error {
 
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("complete command expects 1 non-empty string argument, %s", err.Error())
+			return fmt.Errorf("complete command expects 1 non-empty string argument, (%s)", err.Error())
 
 		}
 
@@ -105,10 +125,10 @@ func executeCommand(command string, args []string) error {
 			return err
 		}
 		return nil
-	case "import":
-		return nil
-	case "export":
-		return nil
+	// case "import":
+	// 	return nil
+	// case "export":
+	// 	return nil
 	default:
 		return fmt.Errorf("invalid command '%s'", command)
 	}
@@ -119,6 +139,7 @@ func printDebug(msg string) {
 	if *debug {
 		fmt.Printf("[DEBUG]: %s\n", msg)
 	}
+
 }
 
 func printfDebug(format string, a ...any) {

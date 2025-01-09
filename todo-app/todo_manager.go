@@ -144,6 +144,10 @@ func parseTodoRecord(record []string) (Todo, error) {
 }
 
 func (tm *TodoManager) Export(filePath string) error {
+	if len(tm.todos) == 0 {
+		return nil
+	}
+
 	if !strings.HasSuffix(filePath, ".csv") {
 		return errors.New("path must be to a .csv file")
 	}
@@ -188,6 +192,7 @@ func NewTodoManager() *TodoManager {
 }
 
 func (tm *TodoManager) DisplayTodos(all bool) {
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	defer w.Flush()
 
