@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 )
 
 var (
@@ -31,7 +30,7 @@ func main() {
 	// export(filePath string)
 
 	todoManager = TodoManager{}
-	todoManager.Import("./todos.csv", false)
+	todoManager.Import("./storage.json")
 
 	flag.Parse()
 	args := flag.Args()
@@ -50,8 +49,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)
 	}
-
-	todoManager.Export("./todos.csv")
 
 }
 
@@ -90,20 +87,6 @@ func executeCommand(command string, args []string) error {
 	case "remove":
 		return nil
 	case "complete":
-		if len(args) != 1 {
-			return fmt.Errorf("complete command expects 1 non-empty string argument")
-		}
-
-		id, err := strconv.Atoi(args[0])
-		if err != nil {
-			return fmt.Errorf("complete command expects 1 non-empty string argument, %s", err.Error())
-
-		}
-
-		err = todoManager.MarkCompleted(id)
-		if err != nil {
-			return err
-		}
 		return nil
 	case "import":
 		return nil
