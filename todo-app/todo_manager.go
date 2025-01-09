@@ -46,13 +46,18 @@ func (tm *TodoManager) RemoveTodo(id int) error {
 	}
 	return fmt.Errorf("no todo with id %d", id)
 }
+func (tm *TodoManager) SetCompleted(id int, completed bool) error {
 
-func (tm *TodoManager) MarkCompleted(id int) error {
 	for i, t := range tm.todos {
 		if t.ID == id {
-			tm.todos[i].IsCompleted = true
-			tm.todos[i].TimeCompleted = time.Now()
+			tm.todos[i].IsCompleted = completed
+			if completed {
+				tm.todos[i].TimeCompleted = time.Now()
+			} else {
+				tm.todos[i].TimeCompleted = time.Time{} // Zero value
+			}
 			return nil
+
 		}
 	}
 	return fmt.Errorf("no todo with id %d", id)
@@ -197,7 +202,7 @@ func (tm *TodoManager) DisplayTodos(all bool) {
 	defer w.Flush()
 
 	if all {
-		fmt.Fprintln(w, "ID\tDescription\tCompleted\tAdded\tCompleted")
+		fmt.Fprintln(w, "ID\tDescription\tCompleted\tTime added\tTime completed")
 		for _, t := range tm.todos {
 			completedAt := "-"
 			if t.IsCompleted {
@@ -211,10 +216,14 @@ func (tm *TodoManager) DisplayTodos(all bool) {
 				completedAt,
 			)
 		}
-	} else {
-		fmt.Fprintln(w, "ID\tDescription")
-		for _, t := range tm.todos {
+		return
+	}
+
+	fmt.Fprintln(w, "ID\tDescription")
+	for _, t := range tm.todos {
+		if !t.IsCompleted {
 			fmt.Fprintf(w, "%d\t%s\n", t.ID, t.Description)
 		}
 	}
+
 }
