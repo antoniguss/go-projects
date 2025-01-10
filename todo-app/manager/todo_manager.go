@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"encoding/csv"
@@ -219,10 +219,10 @@ func (tm *TodoManager) DisplayTodos(all bool) {
 		return
 	}
 
-	fmt.Fprintln(w, "ID\tDescription")
+	fmt.Fprintln(w, "ID\tDescription\tTime added")
 	for _, t := range tm.todos {
 		if !t.IsCompleted {
-			fmt.Fprintf(w, "%d\t%s\n", t.ID, t.Description)
+			fmt.Fprintf(w, "%d\t%s\t%v ago\n", t.ID, t.Description, time.Since(t.TimeAdded).Round(time.Second))
 		}
 	}
 
