@@ -42,7 +42,6 @@ func Execute() {
 
 func init() {
 	todoManager = manager.NewTodoManager()
-	todoManager.Import("./todos.csv", false)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
