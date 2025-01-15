@@ -25,7 +25,7 @@ var removeCmd = &cobra.Command{
 			return fmt.Errorf("invalid ID: %s", args[0])
 		}
 
-		if err := todoManager.RemoveTodo(id); err != nil {
+		if err := todoStorage.RemoveTodo(id); err != nil {
 			return fmt.Errorf("invalid ID: %s", err)
 		}
 

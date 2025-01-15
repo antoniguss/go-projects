@@ -20,7 +20,7 @@ var addCmd = &cobra.Command{
 		if len(args[0]) == 0 {
 			return fmt.Errorf("TODO description cannot be empty")
 		}
-		id := todoManager.AddTodo(args[0])
+		id := todoStorage.AddTodo(args[0])
 
 		//Check if debug flag is set
 		debug, _ := cmd.Flags().GetBool("debug")

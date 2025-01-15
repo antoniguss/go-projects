@@ -28,7 +28,7 @@ var completeCmd = &cobra.Command{
 
 		undo, _ := cmd.Flags().GetBool("undo")
 
-		if err := todoManager.SetCompleted(id, !undo); err != nil {
+		if err := todoStorage.SetCompleted(id, !undo); err != nil {
 			return fmt.Errorf("invalid ID: %s", err)
 		}
 

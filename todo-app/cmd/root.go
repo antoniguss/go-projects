@@ -1,13 +1,10 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	"fmt"
+	"log"
 	"os"
 
-	"github.com/antoniguss/go-projects/todo-app/manager"
+	"github.com/antoniguss/go-projects/todo-app/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -21,27 +18,37 @@ var rootCmd = &cobra.Command{
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
-var todoManager *manager.TodoManager
+var todoStorage storage.Storage
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		log.Print(err)
 		os.Exit(1)
 	}
 
-	// Export might show an error, show only if debug is on
-	debug, _ := rootCmd.Flags().GetBool("debug")
-	err = todoManager.Export("./todos.csv")
-	if err != nil && debug {
-		fmt.Println(err)
+	err = todoStorage.Close()
+	if err != nil {
+		log.Print(err)
 	}
 
 }
 
 func init() {
-	todoManager = manager.NewTodoManager()
+	var err error
+	todoStorage, err = storage.NewStorage("sqlite", "./todos.db")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = todoStorage.Setup()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
