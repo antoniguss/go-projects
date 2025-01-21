@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/gin-gonic/gin"
+)
 
 func main() {
-	fmt.Println("Hello World!")
+	router := gin.Default()
+
+	log.Fatal(router.Run(":8080"))
 }
