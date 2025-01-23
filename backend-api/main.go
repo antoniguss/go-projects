@@ -8,15 +8,16 @@ import (
 )
 
 type InputStruct struct {
-	Number1 int `json:"number1" binding:"required"`
-	Number2 int `json:"number2" binding:"required"`
+	Number1 *int `json:"number1" binding:"required"`
+	Number2 *int `json:"number2" binding:"required"`
 }
 
 type ResultStruct struct {
 	Result int `json:"result"`
 }
 
-func main() {
+func setupRouter() *gin.Engine {
+
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
@@ -40,7 +41,7 @@ func main() {
 			return
 		}
 
-		result := ResultStruct{Result: object.Number1 + object.Number2}
+		result := ResultStruct{Result: *object.Number1 + *object.Number2}
 		ctx.JSON(http.StatusOK, result)
 	})
 
@@ -52,7 +53,8 @@ func main() {
 			return
 		}
 
-		result := ResultStruct{Result: object.Number1 - object.Number2}
+		result := ResultStruct{Result: *object.Number1 - *object.Number2}
+
 		ctx.JSON(http.StatusOK, result)
 	})
 
@@ -64,7 +66,7 @@ func main() {
 			return
 		}
 
-		result := ResultStruct{Result: object.Number1 * object.Number2}
+		result := ResultStruct{Result: *object.Number1 * *object.Number2}
 		ctx.JSON(http.StatusOK, result)
 	})
 
@@ -76,14 +78,21 @@ func main() {
 			return
 		}
 
-		if object.Number2 == 0 {
+		if *object.Number2 == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Division by zero"})
 			return
 		}
 
-		result := ResultStruct{Result: object.Number1 / object.Number2}
+		result := ResultStruct{Result: *object.Number1 / *object.Number2}
 		ctx.JSON(http.StatusOK, result)
 	})
+
+	return router
+}
+
+func main() {
+
+	router := setupRouter()
 
 	router.Run(":3000")
 }
