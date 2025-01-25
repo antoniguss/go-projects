@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPingRoute(t *testing.T) {
-	router := SetupGinRouter()
+	router := SetupBasicRouter()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ping", nil)
 
@@ -22,7 +23,7 @@ func TestPingRoute(t *testing.T) {
 }
 
 func TestAddRoute(t *testing.T) {
-	router := SetupGinRouter()
+	router := SetupBasicRouter()
 	w := httptest.NewRecorder()
 
 	// Test valid addition
@@ -52,7 +53,7 @@ func TestAddRoute(t *testing.T) {
 }
 
 func TestSubtractRoute(t *testing.T) {
-	router := SetupGinRouter()
+	router := SetupBasicRouter()
 	w := httptest.NewRecorder()
 
 	input := map[string]int{
@@ -72,7 +73,7 @@ func TestSubtractRoute(t *testing.T) {
 }
 
 func TestMultiplyRoute(t *testing.T) {
-	router := SetupGinRouter()
+	router := SetupBasicRouter()
 	w := httptest.NewRecorder()
 
 	input := map[string]int{
@@ -92,7 +93,7 @@ func TestMultiplyRoute(t *testing.T) {
 }
 
 func TestDivideRoute(t *testing.T) {
-	router := SetupGinRouter()
+	router := SetupBasicRouter()
 
 	t.Run("Valid Division", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -123,10 +124,8 @@ func TestDivideRoute(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, req)
-
+		response := strings.TrimSpace(w.Body.String())
 		assert.Equal(t, 400, w.Code)
-		var response map[string]string
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.Equal(t, "Division by zero", response["error"])
+		assert.Equal(t, "invalid input (division by zero)", response)
 	})
 }

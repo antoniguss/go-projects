@@ -26,10 +26,8 @@ func SetupBasicRouter() *http.ServeMux {
 		input := &InputStruct{}
 		err := json.Unmarshal(data, input)
 		if err != nil || input.Number1 == nil || input.Number2 == nil {
-			errorMsg, _ := json.Marshal(map[string]string{"error": "invalid input"})
-			fmt.Fprintf(w, "%s", errorMsg)
+			http.Error(w, "invalid input", http.StatusBadRequest)
 			return
-			// w.WriteHeader(http.StatusBadRequest)
 		}
 		result := ResultStruct{Result: *input.Number1 + *input.Number2}
 		resultMsg, _ := json.Marshal(result)
@@ -52,10 +50,8 @@ func SetupBasicRouter() *http.ServeMux {
 		input := &InputStruct{}
 		err := json.Unmarshal(data, input)
 		if err != nil || input.Number1 == nil || input.Number2 == nil {
-			errorMsg, _ := json.Marshal(map[string]string{"error": "invalid input"})
-			fmt.Fprintf(w, "%s", errorMsg)
+			http.Error(w, "invalid input", http.StatusBadRequest)
 			return
-			// w.WriteHeader(http.StatusBadRequest)
 		}
 		result := ResultStruct{Result: *input.Number1 - *input.Number2}
 		resultMsg, _ := json.Marshal(result)
@@ -78,10 +74,8 @@ func SetupBasicRouter() *http.ServeMux {
 		input := &InputStruct{}
 		err := json.Unmarshal(data, input)
 		if err != nil || input.Number1 == nil || input.Number2 == nil {
-			errorMsg, _ := json.Marshal(map[string]string{"error": "invalid input"})
-			fmt.Fprintf(w, "%s", errorMsg)
+			http.Error(w, "invalid input", http.StatusBadRequest)
 			return
-			// w.WriteHeader(http.StatusBadRequest)
 		}
 		result := ResultStruct{Result: *input.Number1 * *input.Number2}
 		resultMsg, _ := json.Marshal(result)
@@ -103,14 +97,17 @@ func SetupBasicRouter() *http.ServeMux {
 
 		input := &InputStruct{}
 		err := json.Unmarshal(data, input)
-		if err != nil || input.Number1 == nil || input.Number2 == nil || *input.Number2 == 0 {
-			errorMsg, _ := json.Marshal(map[string]string{"error": "invalid input"})
-			fmt.Fprintf(w, "%s", errorMsg)
+		if err != nil || input.Number1 == nil || input.Number2 == nil {
+			http.Error(w, "invalid input", http.StatusBadRequest)
 			return
-			// w.WriteHeader(http.StatusBadRequest)
 		}
 
-		result := ResultStruct{Result: *input.Number1 * *input.Number2}
+		if *input.Number2 == 0 {
+			http.Error(w, "invalid input (division by zero)", http.StatusBadRequest)
+			return
+		}
+
+		result := ResultStruct{Result: *input.Number1 / *input.Number2}
 		resultMsg, _ := json.Marshal(result)
 		fmt.Fprintf(w, "%s", resultMsg)
 
