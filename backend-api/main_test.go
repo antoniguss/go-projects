@@ -11,7 +11,7 @@ import (
 )
 
 func TestPingRoute(t *testing.T) {
-	router := setupRouter()
+	router := SetupGinRouter()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ping", nil)
 
@@ -22,7 +22,7 @@ func TestPingRoute(t *testing.T) {
 }
 
 func TestAddRoute(t *testing.T) {
-	router := setupRouter()
+	router := SetupGinRouter()
 	w := httptest.NewRecorder()
 
 	// Test valid addition
@@ -52,7 +52,7 @@ func TestAddRoute(t *testing.T) {
 }
 
 func TestSubtractRoute(t *testing.T) {
-	router := setupRouter()
+	router := SetupGinRouter()
 	w := httptest.NewRecorder()
 
 	input := map[string]int{
@@ -72,7 +72,7 @@ func TestSubtractRoute(t *testing.T) {
 }
 
 func TestMultiplyRoute(t *testing.T) {
-	router := setupRouter()
+	router := SetupGinRouter()
 	w := httptest.NewRecorder()
 
 	input := map[string]int{
@@ -92,7 +92,7 @@ func TestMultiplyRoute(t *testing.T) {
 }
 
 func TestDivideRoute(t *testing.T) {
-	router := setupRouter()
+	router := SetupGinRouter()
 
 	t.Run("Valid Division", func(t *testing.T) {
 		w := httptest.NewRecorder()
