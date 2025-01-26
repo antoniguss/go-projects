@@ -1,18 +1,20 @@
 package main
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 func main() {
+	router := SetupBasicRouter()
+	loggingRouter := SetupLoggingMiddleWare(router)
 
-	// router := SetupGinRouter()
-	//
-	// router.Run(":3000")
-
-	mux := SetupBasicRouter()
 	server := http.Server{
 		Addr:    "localhost:3000",
-		Handler: mux,
+		Handler: loggingRouter,
 	}
 
-	server.ListenAndServe()
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
