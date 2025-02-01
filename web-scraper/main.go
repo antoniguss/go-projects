@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
-	"regexp"
+
+	"golang.org/x/net/html"
 )
 
 func main() {
@@ -20,30 +19,21 @@ func main() {
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// urlRegex := regexp.MustCompile(
+	// 	`(?mi)https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`,
+	// )
 
-	urlRegex := regexp.MustCompile(
-		`(?mi)https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`,
-	)
+	// fmt.Printf("body: %v\n", string(body))
 
-	fmt.Printf("body: %v\n", string(body))
+	tokenizer := html.NewTokenizer(resp.Body)
+	for {
+		tokenType := tokenizer.Next()
+		token := tokenizer.Token()
+		if tokenType == html.ErrorToken {
+			break
+		}
 
-	urlsFound := urlRegex.FindAllString(string(body), -1)
-	urlSet := make(map[string]struct{})
-	for _, url := range urlsFound {
-		urlSet[url] = struct{}{}
-	}
-
-	for url := range urlSet {
-		fmt.Println(url)
-	}
-
-	for urlS := range urlSet {
-		url, _ := url.Parse(urlS)
-
-		fmt.Printf("url.Hostname(): %v\n", url.Hostname())
+		fmt.Printf("tokenType: %v\n", tokenType)
+		fmt.Printf("token: %v\n", token)
 	}
 }
