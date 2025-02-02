@@ -4,31 +4,34 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
 func main() {
-	fmt.Println("Hello, World!")
-
-	links := make(map[string]struct{})
-
 	path := "https://webscraper.io/test-sites/e-commerce/allinone"
 	resp, err := http.Get(path)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer resp.Body.Close()
 
-	// urlRegex := regexp.MustCompile(
-	// 	`(?mi)https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`,
-	// )
+	links := parseResponse(resp)
 
-	// fmt.Printf("body: %v\n", string(body))
+	fmt.Printf("links: %v\n", links)
+}
 
+func parseResponse(resp *http.Response) (links []string) {
+	linkSet := make(map[string]struct{})
 	tokenizer := html.NewTokenizer(resp.Body)
+
+	baseURL, err := url.Parse(resp.Request.URL.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for {
 		tokenType := tokenizer.Next()
 		token := tokenizer.Token()
@@ -36,8 +39,6 @@ func main() {
 			break
 		}
 
-		// fmt.Printf("tokenType: %v\n", tokenType)
-		// fmt.Printf("token: %v\n", token)
 		if token.Data != "a" {
 			continue
 		}
@@ -48,17 +49,27 @@ func main() {
 			continue
 		}
 
+		// Check if the href is a relative URL
 		if strings.HasPrefix(href, "/") {
-			href = path + href
+			href = baseURL.Scheme + "://" + baseURL.Host + href
+		} else if !strings.HasPrefix(href, "http") {
+			absoluteURL, err := baseURL.Parse(href)
+			if err != nil {
+				log.Printf("error parsing href %s: %v", href, err)
+				continue
+			}
+			href = absoluteURL.String()
 		}
 
-		links[href] = struct{}{}
-
+		linkSet[href] = struct{}{}
 	}
 
-	for link := range links {
-		fmt.Printf("link: %v\n", link)
+	links = make([]string, 0, len(linkSet))
+	for k := range linkSet {
+		links = append(links, k)
 	}
+
+	return links
 }
 
 func getHref(token html.Token) (ok bool, href string) {
@@ -67,6 +78,5 @@ func getHref(token html.Token) (ok bool, href string) {
 			return true, attr.Val
 		}
 	}
-
 	return
 }
