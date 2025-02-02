@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"golang.org/x/net/html"
 )
 
 func main() {
 	fmt.Println("Hello, World!")
+
+	links := make(map[string]struct{})
 
 	path := "https://webscraper.io/test-sites/e-commerce/allinone"
 	resp, err := http.Get(path)
@@ -33,7 +36,37 @@ func main() {
 			break
 		}
 
-		fmt.Printf("tokenType: %v\n", tokenType)
-		fmt.Printf("token: %v\n", token)
+		// fmt.Printf("tokenType: %v\n", tokenType)
+		// fmt.Printf("token: %v\n", token)
+		if token.Data != "a" {
+			continue
+		}
+
+		ok, href := getHref(token)
+
+		if !ok {
+			continue
+		}
+
+		if strings.HasPrefix(href, "/") {
+			href = path + href
+		}
+
+		links[href] = struct{}{}
+
 	}
+
+	for link := range links {
+		fmt.Printf("link: %v\n", link)
+	}
+}
+
+func getHref(token html.Token) (ok bool, href string) {
+	for _, attr := range token.Attr {
+		if attr.Key == "href" {
+			return true, attr.Val
+		}
+	}
+
+	return
 }
