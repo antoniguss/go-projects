@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,8 +10,14 @@ import (
 )
 
 func main() {
-	path := "https://webscraper.io/test-sites/e-commerce/allinone"
-	resp, err := http.Get(path)
+	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
+
+	rootDomain, err := getDomain(rootPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Get(rootPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -20,17 +25,36 @@ func main() {
 
 	links := parseResponse(resp)
 
-	fmt.Printf("links: %v\n", links)
+	for _, link := range links {
+		domain, err := getDomain(link)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if domain != rootDomain {
+			log.Println("skipping")
+		}
+	}
+}
+
+func getDomain(path string) (domain string, err error) {
+	var url *url.URL
+	url, err = url.Parse(path)
+	if err != nil {
+		return
+	}
+
+	hostname := strings.Split(url.Hostname(), ".")
+
+	domain = hostname[len(hostname)-2] + "." + hostname[len(hostname)-1]
+	return domain, nil
 }
 
 func parseResponse(resp *http.Response) (links []string) {
 	linkSet := make(map[string]struct{})
 	tokenizer := html.NewTokenizer(resp.Body)
 
-	baseURL, err := url.Parse(resp.Request.URL.String())
-	if err != nil {
-		log.Fatal(err)
-	}
+	baseURL := resp.Request.URL
 
 	for {
 		tokenType := tokenizer.Next()
@@ -44,24 +68,28 @@ func parseResponse(resp *http.Response) (links []string) {
 		}
 
 		ok, href := getHref(token)
-
 		if !ok {
 			continue
 		}
 
-		// Check if the href is a relative URL
-		if strings.HasPrefix(href, "/") {
-			href = baseURL.Scheme + "://" + baseURL.Host + href
-		} else if !strings.HasPrefix(href, "http") {
-			absoluteURL, err := baseURL.Parse(href)
-			if err != nil {
-				log.Printf("error parsing href %s: %v", href, err)
-				continue
-			}
-			href = absoluteURL.String()
+		hrefURL, err := url.Parse(href)
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		linkSet[href] = struct{}{}
+		var absoluteURL *url.URL
+		if hrefURL.IsAbs() {
+			absoluteURL = hrefURL
+		} else {
+			absoluteURL = baseURL.ResolveReference(hrefURL)
+		}
+
+		if absoluteURL.Scheme == "http" || absoluteURL.Scheme == "https" {
+			linkSet[absoluteURL.String()] = struct{}{}
+		} else {
+			log.Println("Skipping non-http(s) link:", href)
+		}
+
 	}
 
 	links = make([]string, 0, len(linkSet))
