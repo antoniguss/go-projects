@@ -1,17 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/html"
 )
 
-func main() {
-	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
-
+func scrapePath(rootPath string) {
 	rootDomain, err := getDomain(rootPath)
 	if err != nil {
 		log.Fatal(err)
@@ -34,7 +35,39 @@ func main() {
 		if domain != rootDomain {
 			log.Println("skipping")
 		}
+		fmt.Printf("link: %v\n", link)
 	}
+}
+
+func main() {
+	ch := make(chan int)
+
+	var wg sync.WaitGroup
+
+	for i := range 100000 {
+		wg.Add(1)
+		go power(2, i, ch, &wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for result := range ch {
+		fmt.Println(result)
+	}
+	// rootPath := "https://www.wikipedia.org/"
+	// scrapePath(rootPath)
+}
+
+// Calculates a^b
+func power(a, b int, ch chan<- int, wg *sync.WaitGroup) int {
+	defer wg.Done()
+	result := int(math.Pow(float64(a), float64(b)))
+
+	ch <- result
+	return result
 }
 
 func getDomain(path string) (domain string, err error) {
