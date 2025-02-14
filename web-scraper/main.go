@@ -12,53 +12,61 @@ import (
 	"golang.org/x/net/html"
 )
 
-func scrapePath(rootPath string) {
-	rootDomain, err := getDomain(rootPath)
+func scrapePath(rootPath string) (links []string, err error) {
+	var rootDomain string
+	rootDomain, err = getDomain(rootPath)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	resp, err := http.Get(rootPath)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 	defer resp.Body.Close()
 
-	links := parseResponse(resp)
+	foundLinks := parseResponse(resp)
 
-	for _, link := range links {
+	for _, link := range foundLinks {
 		domain, err := getDomain(link)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
-		if domain != rootDomain {
-			log.Println("skipping")
+		if domain == rootDomain {
+			links = append(links, link)
 		}
-		fmt.Printf("link: %v\n", link)
 	}
+
+	return links, nil
 }
 
 func main() {
-	ch := make(chan int)
+	// ch := make(chan int)
+	//
+	// var wg sync.WaitGroup
+	//
+	// for i := range 100000 {
+	// 	wg.Add(1)
+	// 	go power(2, i, ch, &wg)
+	// }
+	//
+	// go func() {
+	// 	wg.Wait()
+	// 	close(ch)
+	// }()
+	//
+	// for result := range ch {
+	// 	fmt.Println(result)
+	// }
 
-	var wg sync.WaitGroup
-
-	for i := range 100000 {
-		wg.Add(1)
-		go power(2, i, ch, &wg)
+	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
+	links, err := scrapePath(rootPath)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	for result := range ch {
-		fmt.Println(result)
-	}
-	// rootPath := "https://www.wikipedia.org/"
-	// scrapePath(rootPath)
+	fmt.Printf("links: %v\n", links)
 }
 
 // Calculates a^b
@@ -70,6 +78,8 @@ func power(a, b int, ch chan<- int, wg *sync.WaitGroup) int {
 	return result
 }
 
+// Returns the domain from the url, returns an error if the url can't be parsed
+// e.g. https://en.wikipedia.org/wiki/Go_(programming_language) returns wikipedia.org
 func getDomain(path string) (domain string, err error) {
 	var url *url.URL
 	url, err = url.Parse(path)
@@ -83,6 +93,7 @@ func getDomain(path string) (domain string, err error) {
 	return domain, nil
 }
 
+// Returns a list of absolute links found in the given HTTP response, without duplicates
 func parseResponse(resp *http.Response) (links []string) {
 	linkSet := make(map[string]struct{})
 	tokenizer := html.NewTokenizer(resp.Body)
