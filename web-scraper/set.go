@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// https://gist.github.com/fatih/6206844
 type Set struct {
 	m map[string]bool
 	sync.RWMutex
