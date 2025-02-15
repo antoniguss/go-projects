@@ -12,6 +12,69 @@ import (
 	"golang.org/x/net/html"
 )
 
+func main() {
+	fmt.Println("Starting")
+
+	checked := NewSet()
+	channel := make(chan string)
+	wg := sync.WaitGroup{}
+
+	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
+	checked.Add(rootPath)
+
+	links, err := scrapePath(rootPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Start a goroutine to process the links from the channel
+	go func() {
+		for link := range channel {
+			wg.Add(1)
+			go check(link, checked, channel, &wg)
+		}
+	}()
+
+	// Send the initial links to the channel
+	for _, link := range links {
+		channel <- link
+	}
+
+	// Close the channel when all links have been processed
+	wg.Wait()
+	close(channel)
+
+	for _, link := range checked.List() {
+		fmt.Println(link)
+	}
+
+	fmt.Println("Scraping completed")
+}
+
+func check(url string, checked *Set, channel chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	if checked.Has(url) {
+		return
+	}
+
+	log.Printf("Checking %s\n", url)
+	// Mark this URL as checked
+	checked.Add(url)
+
+	links, err := scrapePath(url)
+	if err != nil {
+		log.Println(err) // Log the error but do not exit
+		return
+	}
+
+	for _, link := range links {
+		if !checked.Has(link) {
+			channel <- link
+		}
+	}
+}
+
 func scrapePath(rootPath string) (links []string, err error) {
 	var rootDomain string
 	rootDomain, err = getDomain(rootPath)
@@ -39,34 +102,6 @@ func scrapePath(rootPath string) (links []string, err error) {
 	}
 
 	return links, nil
-}
-
-func main() {
-	// ch := make(chan int)
-	//
-	// var wg sync.WaitGroup
-	//
-	// for i := range 100000 {
-	// 	wg.Add(1)
-	// 	go power(2, i, ch, &wg)
-	// }
-	//
-	// go func() {
-	// 	wg.Wait()
-	// 	close(ch)
-	// }()
-	//
-	// for result := range ch {
-	// 	fmt.Println(result)
-	// }
-
-	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
-	links, err := scrapePath(rootPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("links: %v\n", links)
 }
 
 // Calculates a^b
