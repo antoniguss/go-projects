@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -15,63 +16,44 @@ import (
 func main() {
 	fmt.Println("Starting")
 
-	checked := NewSet()
-	channel := make(chan string)
-	wg := sync.WaitGroup{}
-
 	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
-	checked.Add(rootPath)
+	urls := make(chan string)
+	results := make(chan []string)
 
-	links, err := scrapePath(rootPath)
-	if err != nil {
-		log.Fatal(err)
+	numWorkers := 5
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
+
+	for range numWorkers {
+		go worker(urls, results, &wg)
 	}
 
-	// Start a goroutine to process the links from the channel
-	go func() {
-		for link := range channel {
-			wg.Add(1)
-			go check(link, checked, channel, &wg)
-		}
-	}()
+	urls <- rootPath
+	close(urls)
 
-	// Send the initial links to the channel
-	for _, link := range links {
-		channel <- link
-	}
-
-	// Close the channel when all links have been processed
 	wg.Wait()
-	close(channel)
+	close(results)
 
-	for _, link := range checked.List() {
-		fmt.Println(link)
+	for result := range results {
+		for _, url := range result {
+			urls <- url
+		}
 	}
 
 	fmt.Println("Scraping completed")
 }
 
-func check(url string, checked *Set, channel chan string, wg *sync.WaitGroup) {
+func worker(urls <-chan string, results chan<- []string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	rateLimiter := time.Tick(100 * time.Millisecond)
 
-	if checked.Has(url) {
-		return
-	}
-
-	log.Printf("Checking %s\n", url)
-	// Mark this URL as checked
-	checked.Add(url)
-
-	links, err := scrapePath(url)
-	if err != nil {
-		log.Println(err) // Log the error but do not exit
-		return
-	}
-
-	for _, link := range links {
-		if !checked.Has(link) {
-			channel <- link
+	for url := range urls {
+		<-rateLimiter
+		links, err := scrapePath(url)
+		if err != nil {
+			fmt.Println("TODO: Handle error in worker")
 		}
+		results <- links
 	}
 }
 
@@ -82,7 +64,11 @@ func scrapePath(rootPath string) (links []string, err error) {
 		return
 	}
 
-	resp, err := http.Get(rootPath)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(rootPath)
 	if err != nil {
 		return
 	}
