@@ -3,19 +3,35 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 )
 
-// Learnng concurrency
+// Learning concurrency
 type Order struct {
 	ID     int
 	Status string
 }
 
 func main() {
+	var wg sync.WaitGroup
+
+	wg.Add(3)
 	orders := generateOrders(20)
 
-	processOrders(orders)
+	go func() {
+		defer wg.Done()
+		processOrders(orders)
+	}()
+
+	go func() {
+		defer wg.Done()
+		updateOrderStatuses(orders)
+	}()
+
+	wg.Wait()
+
+	reportOrderStatus(orders)
 
 	fmt.Println("All operations completed")
 }
@@ -58,7 +74,7 @@ func generateOrders(count int) []*Order {
 	return orders
 }
 
-func recordOrderStatus(orders []*Order) {
+func reportOrderStatus(orders []*Order) {
 	for i := 0; i < 5; i++ {
 		time.Sleep(1 * time.Second)
 		fmt.Println("\n--- Order Status Report ---")
