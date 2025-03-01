@@ -14,7 +14,7 @@ func main() {
 	results := tidy_typesetting(lengths, maxLen)
 
 	for i, v := range results {
-		fmt.Printf("i: %d, T[i] = %d\n", i, v)
+		fmt.Printf("T[%d] = %d\n", i, v)
 	}
 }
 
