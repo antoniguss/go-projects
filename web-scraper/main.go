@@ -11,7 +11,14 @@ import (
 type Order struct {
 	ID     int
 	Status string
+	mu     sync.Mutex
 }
+
+// Global vars
+var (
+	totalUpdates int
+	updateMutex  sync.Mutex
+)
 
 func main() {
 	var wg sync.WaitGroup
@@ -19,39 +26,52 @@ func main() {
 	wg.Add(3)
 	orders := generateOrders(20)
 
-	go func() {
-		defer wg.Done()
-		processOrders(orders)
-	}()
+	// go func() {
+	// 	defer wg.Done()
+	// 	processOrders(orders)
+	// }()
 
-	go func() {
-		defer wg.Done()
-		updateOrderStatuses(orders)
-	}()
+	for i := 0; i < 3; i++ {
+		go func() {
+			defer wg.Done()
+			for _, order := range orders {
+				updateOrderStatus(order)
+			}
+		}()
+	}
 
 	wg.Wait()
 
 	reportOrderStatus(orders)
 
 	fmt.Println("All operations completed")
+	fmt.Println(totalUpdates)
 }
 
-func updateOrderStatuses(orders []*Order) {
-	for _, order := range orders {
-		time.Sleep(
-			time.Duration(rand.Intn(500)) *
-				time.Millisecond,
-		)
+func updateOrderStatus(order *Order) {
+	order.mu.Lock()
+	time.Sleep(
+		time.Duration(rand.Intn(500)) *
+			time.Millisecond,
+	)
 
-		// Get random status
-		status := []string{
-			"Processing", "Shipped", "Delivered",
-		}[rand.Intn(3)]
+	// Get random status
+	status := []string{
+		"Processing", "Shipped", "Delivered",
+	}[rand.Intn(3)]
 
-		order.Status = status
+	order.Status = status
 
-		fmt.Printf("Updated order %d status: %s\n", order.ID, status)
-	}
+	fmt.Printf("Updated order %d status: %s\n", order.ID, status)
+
+	order.mu.Unlock()
+
+	updateMutex.Lock()
+	defer updateMutex.Unlock()
+
+	currentUpdates := totalUpdates
+	time.Sleep(5 * time.Millisecond)
+	totalUpdates = currentUpdates + 1
 }
 
 func processOrders(orders []*Order) {
@@ -75,18 +95,15 @@ func generateOrders(count int) []*Order {
 }
 
 func reportOrderStatus(orders []*Order) {
-	for i := 0; i < 5; i++ {
-		time.Sleep(1 * time.Second)
-		fmt.Println("\n--- Order Status Report ---")
+	fmt.Println("\n--- Order Status Report ---")
 
-		for _, order := range orders {
-			fmt.Printf(
-				"Order %d: %s\n",
-				order.ID, order.Status,
-			)
-		}
-
-		fmt.Println("-------------")
-		fmt.Println()
+	for _, order := range orders {
+		fmt.Printf(
+			"Order %d: %s\n",
+			order.ID, order.Status,
+		)
 	}
+
+	fmt.Println("-------------")
+	fmt.Println()
 }
