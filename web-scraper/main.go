@@ -16,9 +16,10 @@ type Order struct {
 
 func main() {
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
-	orderChan := make(chan *Order)
+	orderChan := make(chan *Order, 20)
+	processedChan := make(chan *Order, 20)
 
 	go func() {
 		defer wg.Done()
@@ -32,20 +33,48 @@ func main() {
 		fmt.Println("Done generating orders")
 	}()
 
-	go processOrders(orderChan, &wg)
+	go processOrders(orderChan, processedChan, &wg)
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case processOrder, ok := <-processedChan:
+				if !ok {
+					fmt.Println("Processing channel closed")
+					return
+				}
+				fmt.Printf(
+					"Processed order %d with status: %s\n",
+					processOrder.ID,
+					processOrder.Status,
+				)
+
+			case <-time.After(500 * time.Millisecond):
+				fmt.Println("Timeout waiting for operation")
+				return
+			}
+		}
+	}()
 
 	wg.Wait()
 }
 
-func processOrders(orderChan <-chan *Order, wg *sync.WaitGroup) {
-	defer wg.Done()
+func processOrders(inChan <-chan *Order, outChan chan<- *Order, wg *sync.WaitGroup) {
+	defer func() {
+		wg.Done()
+		close(outChan)
+	}()
 
-	for order := range orderChan {
+	for order := range inChan {
 		time.Sleep(
 			time.Duration(rand.Intn(500)) *
 				time.Millisecond,
 		)
-		fmt.Printf("Processing order %d\n", order.ID)
+
+		order.Status = "Processed"
+		outChan <- order
 	}
 }
 
