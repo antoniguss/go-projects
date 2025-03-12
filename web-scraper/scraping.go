@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,48 +13,105 @@ import (
 )
 
 // TODO: Make it work
-func scrape() {
-	fmt.Println("Starting")
-
-	rootPath := "https://webscraper.io/test-sites/e-commerce/allinone"
-	urls := make(chan string)
-	results := make(chan []string)
-
-	numWorkers := 5
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
-
-	for range numWorkers {
-		go worker(urls, results, &wg)
-	}
-
-	urls <- rootPath
-
-	for result := range results {
-		for _, url := range result {
-			urls <- url
-		}
-	}
-	wg.Wait()
-	close(urls)
-	close(results)
-
-	fmt.Println("Scraping completed")
+type Scraper struct {
+	visited     map[string]struct{}
+	mutex       sync.RWMutex
+	wg          sync.WaitGroup
+	urlQueue    chan string
+	results     []string
+	rootDomain  string
+	maxRoutines int
+	semaphore   chan struct{}
 }
 
-func worker(urls <-chan string, results chan<- []string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	rateLimiter := time.Tick(100 * time.Millisecond)
+func NewScraper(rootURL string, maxConcurrency int) (*Scraper, error) {
+	parsedURL, err := url.Parse(rootURL)
+	if err != nil {
+		return nil, err
+	}
 
-	for url := range urls {
-		<-rateLimiter
-		links, err := scrapePath(url)
+	return &Scraper{
+		visited:     make(map[string]struct{}),
+		urlQueue:    make(chan string, 1000),
+		results:     []string{},
+		rootDomain:  parsedURL.Hostname(),
+		maxRoutines: maxConcurrency,
+		semaphore:   make(chan struct{}, maxConcurrency),
+	}, nil
+}
+
+func (s *Scraper) worker() {
+	defer s.wg.Done()
+
+	for pageURL := range s.urlQueue {
+		links, err := scrapePath(pageURL)
 		if err != nil {
-			fmt.Println("TODO: Handle error in worker")
+			fmt.Printf("Error scraping %s: %v\n", pageURL, err)
+			continue
 		}
-		fmt.Println(url)
 
-		results <- links
+		// Process found links
+		for _, link := range links {
+			s.mutex.RLock()
+			_, visited := s.visited[link]
+			s.mutex.RUnlock()
+
+			if !visited {
+				s.mutex.Lock()
+				// Check again after acquiring write lock to avoid race condition
+				if _, has := s.visited[link]; !has {
+					s.visited[link] = struct{}{}
+					s.results = append(s.results, link)
+					s.mutex.Unlock()
+
+					// Queue this new URL
+					s.wg.Add(1)
+					s.urlQueue <- link
+				} else {
+					s.mutex.Unlock()
+				}
+			}
+		}
+
+		<-s.semaphore // Release semaphore slot
+	}
+}
+
+func (s *Scraper) Scrape(rootURL string) ([]string, error) {
+	s.mutex.Lock()
+	s.visited[rootURL] = struct{}{}
+	s.results = append(s.results, rootURL)
+	s.mutex.Unlock()
+
+	for i := 0; i < s.maxRoutines; i++ {
+		s.wg.Add(1)
+		go s.worker()
+	}
+
+	s.semaphore <- struct{}{}
+	s.urlQueue <- rootURL
+
+	s.wg.Wait()
+	close(s.urlQueue)
+
+	return s.results, nil
+}
+
+func processUrl(url string, urlsChan chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	fmt.Println("Processing:", url)
+
+	rateLimiter := time.Tick(100 * time.Millisecond)
+	<-rateLimiter
+
+	links, err := scrapePath(url)
+	if err != nil {
+		fmt.Println("Error scraping URL:", url, err)
+		return
+	}
+
+	for _, link := range links {
+		urlsChan <- link
 	}
 }
 
@@ -90,15 +146,6 @@ func scrapePath(rootPath string) (links []string, err error) {
 	}
 
 	return links, nil
-}
-
-// Calculates a^b
-func power(a, b int, ch chan<- int, wg *sync.WaitGroup) int {
-	defer wg.Done()
-	result := int(math.Pow(float64(a), float64(b)))
-
-	ch <- result
-	return result
 }
 
 // Returns the domain from the url, returns an error if the url can't be parsed
